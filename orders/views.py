@@ -1,9 +1,13 @@
+from itertools import product
+
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import render,redirect, get_object_or_404
 from django.views import View
 from django.contrib import messages
 from home.models import Product
 from .cart import Cart
 from .forms import CartAddForm
+from .models import Order, OrderItem
 
 
 class CartView(View):
@@ -30,3 +34,19 @@ class CartRemoveView(View):
         cart.remove(product)
         messages.success(request, 'Your cart has been removed')
         return redirect('orders:cart')
+
+class OrderDetailView(LoginRequiredMixin,View):
+    def get(self, request, product_id):
+        order = get_object_or_404(Order, id=product_id)
+        return render(request, 'orders/order.html', {'order': order})
+
+
+
+class OrderCreateView(LoginRequiredMixin,View):
+    def get(self, request):
+        cart = Cart(request)
+        order = Order.objects.create(user=request.user)
+        for item in cart:
+            OrderItem.objects.create( order=order ,product=item['product'], price=item['price'], quantity=item['quantity'])
+        cart.clear()
+        return redirect('orders:orders_detail',order.id)
